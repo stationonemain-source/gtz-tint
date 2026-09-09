@@ -1,0 +1,101 @@
+{
+  "iphone-se": {
+    "overflowX": 0,
+    "overflowing": [
+      "CANVAS.film__amb →1148"
+    ],
+    "smallTargets": [],
+    "stageH": 667,
+    "innerH": 667,
+    "stageMatchesViewport": true,
+    "headerH": 73,
+    "anchorsUnderHeader": [],
+    "touchDetected": true,
+    "paneW": 375,
+    "errors": []
+  },
+  "iphone-14": {
+    "overflowX": 0,
+    "overflowing": [
+      "CANVAS.film__amb →1155",
+      "DIV.pane →432",
+      "IMG.pane__poster →432",
+      "CANVAS.pane__cv →432"
+    ],
+    "smallTargets": [],
+    "stageH": 844,
+    "innerH": 844,
+    "stageMatchesViewport": true,
+    "headerH": 73,
+    "anchorsUnderHeader": [],
+    "touchDetected": true,
+    "paneW": 475,
+    "errors": []
+  },
+  "pixel-7": {
+    "overflowX": 0,
+    "overflowing": [
+      "CANVAS.film__amb →1166",
+      "DIV.pane →463",
+      "IMG.pane__poster →463",
+      "CANVAS.pane__cv →463"
+    ],
+    "smallTargets": [],
+    "stageH": 915,
+    "innerH": 915,
+    "stageMatchesViewport": true,
+    "headerH": 73,
+    "anchorsUnderHeader": [],
+    "touchDetected": true,
+    "paneW": 515,
+    "errors": []
+  },
+  "iphone-pro-max": {
+    "overflowX": 0,
+    "overflowing": [
+      "CANVAS.film__amb →1175",
+      "DIV.pane →477",
+      "IMG.pane__poster →477",
+      "CANVAS.pane__cv →477"
+    ],
+    "smallTargets": [],
+    "stageH": 932,
+    "innerH": 932,
+    "stageMatchesViewport": true,
+    "headerH": 73,
+    "anchorsUnderHeader": [],
+    "touchDetected": true,
+    "paneW": 524,
+    "errors": []
+  },
+  "landscape": {
+    "overflowX": 0,
+    "overflowing": [
+      "CANVAS.film__amb →1382"
+    ],
+    "smallTargets": [],
+    "stageH": 390,
+    "innerH": 390,
+    "stageMatchesViewport": true,
+    "headerH": 73,
+    "anchorsUnderHeader": [],
+    "touchDetected": true,
+    "paneW": 219,
+    "errors": []
+  },
+  "tablet": {
+    "overflowX": 0,
+    "overflowing": [
+      "CANVAS.film__amb →1344"
+    ],
+    "smallTargets": [],
+    "stageH": 1024,
+    "innerH": 1024,
+    "stageMatchesViewport": true,
+    "headerH": 73,
+    "anchorsUnderHeader": [],
+    "touchDetected": true,
+    "paneW": 576,
+    "errors": []
+  }
+}

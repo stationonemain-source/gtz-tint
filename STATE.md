@@ -87,6 +87,59 @@ it tells the visitor plainly that this is one person, not a crew, which matters 
 everything else about the operation (home bay, no staff) is something the copy deliberately
 does not hide.
 
+## Mobile is the primary case
+
+Traffic arrives from an Instagram bio link, so the phone is the main event.
+Audited on six real viewports (375 / 390 / 412 / 430 / landscape / tablet) with
+`verify/mobile.js`, which reports horizontal overflow, sub-44px tap targets,
+anchors hidden under the fixed header, and viewport-height handling:
+
+```
+cd verify && NODE_PATH="C:/Users/Circl/.claude/skills/scroll-film-studio/node_modules" node mobile.js http://localhost:8811/ mob
+```
+
+Six things it caught, all fixed and all easy to reintroduce:
+
+1. **Every in-page anchor parked its heading under the fixed header** — clicking
+   WORK put the headline behind the nav bar. `scroll-margin-top:88px` (header is 73px).
+2. **The phone button was 38px tall** and the footer links 16px. Everything
+   interactive now clears the 44px touch minimum.
+3. **Three hexagons across a 390px screen is ~118px each.** Now two across at ~170px,
+   and `.comb__row{display:contents}` dissolves the two three-cell rows so all six flow
+   as one wrapping run — as rows they wrapped 2+1, 2+1 and looked broken.
+4. **No hover on a phone, so five of six cell captions were invisible.** All six now
+   show over a scrim. The 19% side padding is geometry, not taste: this hexagon's lower
+   edges run from the mid-point out to 25%, so at 16% off the bottom the shape spans
+   only 17%–83%. Narrower padding and the clip-path slices the label.
+5. **`100vh` on a pinned stage is taller than iOS's visible area** while the URL bar
+   shows, cutting the bottom off every beat. Now `100svh` (not `dvh` — dvh reflows mid-scroll).
+6. **Landscape phone** pushed the headline off the top of a 390px-tall viewport.
+
+### ⚠️ LITE — the low-data path
+
+The film is 5.9 MB of frames. `navigator.connection.saveData`, or an `effectiveType`
+of 2g/3g, **skips the frames entirely and keeps the poster** — 1 frame request instead
+of 151. The squeegee, heat, instrument and every beat still run off scroll, so the
+concept still lands; only the footage motion is gone. Force either path with `?lite=1`
+/ `?full=1`. **If you ever make the poster decorative, LITE visitors get a blank hero.**
+
+### ⚠️ Never take the poster from the concatenated mp4
+
+`ffmpeg -i pass.mp4 -frames:v 1` returns a frame in **decode** order, not presentation
+order, and it silently shipped a Tesla interior from the pre-fix cut as the poster —
+which is the first thing every visitor sees, the `og:image` for link previews, and the
+whole hero under LITE. **Derive it from `frames/f001.webp`** so the two cannot disagree:
+
+```
+python -c "from PIL import Image; Image.open('site/frames/f001.webp').convert('RGB').save('site/assets/poster.jpg','JPEG',quality=74,optimize=True,progressive=True)"
+```
+
+### ⚠️ `scroll-behavior:smooth` vs the `?jump` contract
+
+Smooth scrolling animates `scrollTo`, so `settleAt()` reads the *old* position and lands
+the film on the wrong frame. `film.js` forces `scroll-behavior:auto` whenever `?jump` is
+present. Verify with the jump check: asked-y must equal landed-y at every beat.
+
 ## Rebuilding the film
 
 `media/` is **git-ignored and PC-only** (108 MB of their reels). To rebuild:
