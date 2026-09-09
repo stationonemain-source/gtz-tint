@@ -74,6 +74,19 @@ Film beats (150 WebP frames, 5 fps over a 30 s cut, 600vh driver):
 
 Beat 1 has interior cutaways at 29 s and 34 s — **stay inside 29.9–33.9** or the site opens on a dashboard.
 
+## Voice: first person, and "ONE SET OF HANDS" is load-bearing
+
+The site speaks as **"we"** throughout (Circle's call, 2026-09-09). It shipped mixed — the
+hero said "So we bring film" while the arena said "he competes", the work section said "his
+own bay" and the booking headline said "tell him". A site that refers to its owner in the
+third person reads like a profile written *about* him rather than his business talking to a
+customer, so all five went first person.
+
+**Do not delete "ONE SET OF HANDS" from the work headline.** It is what keeps "we" honest —
+it tells the visitor plainly that this is one person, not a crew, which matters because
+everything else about the operation (home bay, no staff) is something the copy deliberately
+does not hide.
+
 ## Rebuilding the film
 
 `media/` is **git-ignored and PC-only** (108 MB of their reels). To rebuild:
