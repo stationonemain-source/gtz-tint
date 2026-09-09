@@ -31,13 +31,29 @@
   var easeIO = function (t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; };
 
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* LITE — the film is 5.9 MB of frames. On a metered or slow connection that is a
+     real cost to a real person standing in a parking lot, so skip the frames entirely
+     and keep the poster. The squeegee, the heat, the instrument and every beat still
+     run off scroll, so the idea still lands; only the footage motion is gone. */
+  var CONN = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+  var LITE = !!(CONN && (CONN.saveData === true ||
+    /^(slow-2g|2g|3g)$/.test(CONN.effectiveType || '')));
+
   var QS = new URLSearchParams(location.search);
+  if (QS.has('lite')) LITE = true;      /* for verification */
+  if (QS.has('full')) LITE = false;
   /* ?flat — kill every reveal transition so an auditor samples settled colours.
      Without it a contrast checker reads elements mid-fade and invents failures. */
   var FLAT = QS.has('flat');
   if (FLAT) document.documentElement.classList.add('flat');
   var JUMP = QS.get('jump');
-  if (JUMP !== null && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
+  if (JUMP !== null) {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    /* smooth scrolling animates scrollTo, so settleAt would read the OLD position
+       and land the film on the wrong frame — the harness must scroll instantly */
+    document.documentElement.style.scrollBehavior = 'auto';
+  }
 
   /* ───────────────────────── film ───────────────────────── */
   var N = 150;
@@ -187,8 +203,8 @@
       b.a = a;
       b.el.style.opacity = a;
       b.el.style.visibility = a < 0.005 ? 'hidden' : 'visible';
-      b.el.style.transform = (window.innerWidth >= 1024 ? 'translateY(-50%) ' : '') +
-        'translate3d(0,' + ((1 - a) * 22).toFixed(1) + 'px,0)';
+      /* vertical centring lives in CSS `translate:`, so transform is ours alone */
+      b.el.style.transform = 'translate3d(0,' + ((1 - a) * 22).toFixed(1) + 'px,0)';
     }
   }
 
@@ -203,9 +219,12 @@
     playhead += d * 0.16;
     if (Math.abs(d) < 0.02) playhead = target;
 
-    var idx = Math.round(playhead);
-    if (Math.abs(idx - center) >= 2) ensureBitmaps(idx);
-    var painted = draw(playhead);
+    var painted = true;
+    if (!LITE) {
+      var idx = Math.round(playhead);
+      if (Math.abs(idx - center) >= 2) ensureBitmaps(idx);
+      painted = draw(playhead);
+    }
     paintChrome(p);
     paintBeats(p);
 
@@ -220,19 +239,30 @@
     on(window, 'resize', function () { size(); drawn = -1; kick(); });
     on(window, 'scroll', kick, { passive: true });
     on(window, 'orientationchange', function () { size(); drawn = -1; kick(); });
-    pump();
-    ensureBitmaps(0);
-    kick();
-    /* Fill the opening window BEFORE the first scroll, a budgeted slice at a time.
-       Without this the window ramps up during the first ~300px of scroll and lands
-       as two 60-70 ms frames right where the visitor starts moving. Spread, never
-       burst — one big ensureBitmaps call is the spike it is meant to avoid. */
-    (function prewarm(n) {
-      if (n <= 0) return;
-      center = -999;                       /* force a rescan of the same window */
-      ensureBitmaps(Math.round(playhead));
-      setTimeout(function () { prewarm(n - 1); }, 60);
-    })(14);
+
+    if (LITE) {
+      /* Poster stays, and it seeds the ambient bleed so the room behind the glass
+         still carries the film's colour instead of going flat black. Everything
+         below this block still runs — cells, arena, reveals, the dev contract. */
+      if (loader) loader.classList.add('done');
+      var seed = function () { try { actx.drawImage(poster, 0, 0, 96, 170); } catch (e) { } };
+      if (poster && actx) { poster.complete ? seed() : on(poster, 'load', seed); }
+      kick();
+    } else {
+      pump();
+      ensureBitmaps(0);
+      kick();
+      /* Fill the opening window BEFORE the first scroll, a budgeted slice at a time.
+         Without this the window ramps up during the first ~300px of scroll and lands
+         as two 60-70 ms frames right where the visitor starts moving. Spread, never
+         burst — one big ensureBitmaps call is the spike it is meant to avoid. */
+      (function prewarm(n) {
+        if (n <= 0) return;
+        center = -999;                     /* force a rescan of the same window */
+        ensureBitmaps(Math.round(playhead));
+        setTimeout(function () { prewarm(n - 1); }, 60);
+      })(14);
+    }
   } else {
     /* reduced motion: the film is a still, every beat is just stacked copy */
     if (loader) loader.classList.add('done');
@@ -328,6 +358,7 @@
     window.scrollTo(0, y);
     var p = progress();
     playhead = target = p * (N - 1);
+    if (LITE) { paintChrome(p); paintBeats(p); return Promise.resolve(); }
     var idx = Math.round(playhead);
     ensureBitmaps(idx);
     return new Promise(function (res) {
@@ -349,7 +380,7 @@
     var target_y = +JUMP || 0;
     var waitLoad = new Promise(function (res) {
       var t0 = Date.now();
-      (function w() { if (loaded >= N || Date.now() - t0 > 25000) res(); else setTimeout(w, 100); })();
+      (function w() { if (LITE || loaded >= N || Date.now() - t0 > 25000) res(); else setTimeout(w, 100); })();
     });
     Promise.all([waitLoad, document.fonts ? document.fonts.ready : Promise.resolve()])
       .then(function () { if (pane) pane.classList.add('live'); return settleAt(target_y); })
@@ -358,7 +389,7 @@
   } else {
     var t0 = Date.now();
     (function w() {
-      if ((loaded >= 24 || Date.now() - t0 > 12000) && (!document.fonts || document.fonts.status === 'loaded')) ready();
+      if ((LITE || loaded >= 24 || Date.now() - t0 > 12000) && (!document.fonts || document.fonts.status === 'loaded')) ready();
       else setTimeout(w, 120);
     })();
   }

@@ -79,7 +79,10 @@ p{margin:0}
 
 /* ════════════ THE FILM ════════════ */
 .film__driver{height:600vh;position:relative}
-.film__stage{position:sticky;top:0;height:100vh;overflow:hidden;background:#08080A}
+/* svh, not vh: on iOS a pinned 100vh stage is taller than the visible area while the
+   URL bar is showing, so the bottom of every beat gets cut off. svh is the small
+   viewport — it never gets cut, and unlike dvh it does not reflow mid-scroll. */
+.film__stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#08080A}
 
 /* Live ambient bleed — the film's own light, thrown onto the room behind the glass.
    Blur BEFORE scale: filter runs in the element's own coordinate space, so a 14px
@@ -100,6 +103,7 @@ p{margin:0}
 .pane{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   height:100vh;width:calc(100vh * 0.5625);
+  height:100svh;width:calc(100svh * 0.5625);
   z-index:2;overflow:hidden;background:#0A0A0C;
 }
 @media(min-width:1024px){
@@ -177,7 +181,9 @@ p{margin:0}
   opacity:0;will-change:opacity,transform
 }
 .beat>*{pointer-events:auto}
-@media(min-width:1024px){ .beat{left:max(var(--pad),6vw);bottom:auto;top:50%;transform:translateY(-50%);width:min(520px,42vw)} }
+/* Centre with `translate:`, never `transform:` — film.js owns `transform` for the
+   per-beat parallax, and a stylesheet transform on the same element gets clobbered. */
+@media(min-width:1024px){ .beat{left:max(var(--pad),6vw);bottom:auto;top:50%;translate:0 -50%;width:min(520px,42vw)} }
 .beat__eye{font:700 var(--t-11)/1.4 var(--f-mono);letter-spacing:.26em;text-transform:uppercase;color:var(--heat);margin-bottom:16px}
 .beat__h{
   font-size:clamp(40px,7.4vw,84px);
@@ -353,6 +359,62 @@ p{margin:0}
 .ftr__l a{color:var(--bone);text-decoration:none;border-bottom:1px solid var(--smoke)}
 .ftr__l a:hover{border-bottom-color:var(--red)}
 .ftr__fine{color:var(--faint);font-size:var(--t-125);max-width:52ch;margin-top:6px}
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE
+   Most of this site's traffic arrives from an Instagram bio link on a
+   phone, so the phone is the primary case, not the fallback.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Anchor targets must clear the fixed header, or clicking WORK parks the
+   headline underneath the nav bar. Header measures 73px; 88 gives air. */
+#work,#film,#shades,#law,#arena,#book{scroll-margin-top:88px}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+
+/* Touch targets: 44x44 minimum. The phone button is the primary CTA on mobile
+   and was shipping at 38px tall. */
+.hdr__cta{min-height:44px}
+.skip{min-height:44px;display:inline-flex;align-items:center}
+.ftr__l a{display:inline-block;padding:11px 4px}
+.btn{min-height:48px}
+a,button,.cell{-webkit-tap-highlight-color:rgba(255,61,87,.18)}
+
+@media(max-width:759px){
+  /* Three hexagons across a 390px screen is ~118px each — too small to read the
+     work, which is the entire point of the section. Two across, ~170px each.
+     `display:contents` dissolves the two three-cell rows so all six flow as one
+     wrapping run; leaving them as rows wraps 2+1, 2+1 and looks broken. */
+  .comb{display:flex;flex-wrap:wrap;justify-content:center;
+        --cg:10px;--cw:calc((100% - var(--cg)) / 2);gap:var(--cg)}
+  .comb__row{display:contents}
+  .cell{flex:0 0 var(--cw)}
+
+  /* No hover on a phone, so five of six captions were invisible. Show them all.
+     The side padding is geometry, not taste: this hexagon's lower edges run from
+     the mid-point out to 25%, so at 16% off the bottom the shape spans only
+     17%–83% — anything narrower and the caption gets sliced by the clip-path. */
+  .cell figcaption{
+    opacity:1;transform:none;bottom:0;padding:30% 19% 16%;
+    background:linear-gradient(transparent,rgba(6,6,8,.88) 58%);
+  }
+  .cell figcaption b{font-size:11px;line-height:1.12}
+  .cell figcaption span{font-size:8px;letter-spacing:.1em;line-height:1.2}
+}
+
+/* Landscape phone: 390px of height with a bottom-anchored beat pushes the
+   headline off the top. Centre it and shrink the type instead. */
+@media(orientation:landscape) and (max-height:520px){
+  .beat{top:50%;bottom:auto;translate:0 -50%;width:min(58vw,430px)}
+  .beat__h{font-size:clamp(26px,5vw,40px);margin-bottom:10px}
+  .beat__p{font-size:var(--t-14);line-height:1.45}
+  .beat__eye{margin-bottom:8px}
+  .beat--fin .beat__p{margin-bottom:14px}
+  .scrollcue{display:none}
+  .inst{top:auto;bottom:10px}
+  .inst__v{font-size:var(--t-24)}
+  .inst__bar{margin:5px 0 4px}
+}
 
 /* ════════════ reduced motion ════════════ */
 @media(prefers-reduced-motion:reduce){
