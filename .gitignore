@@ -3,3 +3,8 @@ media/
 verify/shots/
 verify/node_modules/
 node_modules/
+verify/mob/
+verify/live/
+verify/*.png
+verify/mob-report.json
+gtz-tint-preview.jpg
