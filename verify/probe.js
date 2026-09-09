@@ -22,12 +22,12 @@ const URL = process.argv[2] || 'http://localhost:8811/';
 
   const out = await p.evaluate(async () => {
     const q = s => document.querySelector(s);
-    let avif = 'n/a';
+    let frame = 'n/a';
     try {
-      const r = await fetch('frames/f001.avif');
+      const r = await fetch('frames/f001.webp');
       const bm = await createImageBitmap(await r.blob());
-      avif = bm.width + 'x' + bm.height;
-    } catch (e) { avif = 'FAIL ' + e.message; }
+      frame = bm.width + 'x' + bm.height;
+    } catch (e) { frame = 'FAIL ' + e.message; }
     let webpOK = 'n/a';
     try {
       const im = new Image();
@@ -43,7 +43,7 @@ const URL = process.argv[2] || 'http://localhost:8811/';
       canvas: cv ? cv.width + 'x' + cv.height : 'none',
       paneLive: q('#pane') && q('#pane').classList.contains('live'),
       bodyH: document.body.scrollHeight,
-      avifDecode: avif, webp: webpOK,
+      frameDecode: frame, webp: webpOK,
       fonts: document.fonts ? document.fonts.status : 'n/a',
     };
   });
