@@ -1,0 +1,369 @@
+/* ════════════════════════════════════════════════════════════════
+   GTZ TINT — "THE PASS"
+   Palette, type and motion pulled from the shop itself: a hexagon
+   LED grid, a black-and-red graffiti mural, candy red paint, and a
+   magenta neon OPEN sign.
+   ════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* the tinted world */
+  --ink:#0B0B0D; --ink2:#121216; --ink3:#17171C; --smoke:#22222A;
+  --bone:#F4F1EA; --muted:#9C9CA6; --faint:#8E8E99;
+  /* the shop */
+  --red:#C8102E; --red-deep:#7A0A1C; --red-lite:#FF3D57;  /* small red TEXT only: #C8102E is 3.3:1 on ink */ --neon:#FF2E9A; --hex:#EAF4FF;
+  /* the sun */
+  --heat:#FFC46B; --heat-hi:#FFF0CE;
+
+  --pad:clamp(20px,5vw,72px);
+  --maxw:1320px;
+
+  /* type scale — 11 / 12.5 / 14 / 16 / 19 / 24 / 32 / 44 */
+  --t-11:11px; --t-125:12.5px; --t-14:14px; --t-16:16px;
+  --t-19:19px; --t-24:24px; --t-32:32px; --t-44:44px;
+
+  --f-disp:"Archivo Black",Impact,"Haettenschweiler","Arial Narrow Bold",sans-serif;
+  --f-body:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --pass:0%;          /* the squeegee line, driven by scroll */
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ink); color:var(--bone);
+  font:400 var(--t-16)/1.62 var(--f-body);
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+img,video,canvas{display:block;max-width:100%}
+a{color:inherit}
+h1,h2,h3{margin:0;font-family:var(--f-disp);font-weight:400;letter-spacing:-.02em;line-height:.94;text-transform:uppercase}
+p{margin:0}
+
+.skip{position:absolute;left:-9999px;top:0;z-index:200;background:var(--red);color:#fff;padding:12px 18px;font:700 var(--t-14)/1 var(--f-body)}
+.skip:focus{left:12px;top:12px}
+:focus-visible{outline:2px solid var(--neon);outline-offset:3px}
+
+/* ───────── header ───────── */
+.hdr{
+  position:fixed;inset:0 0 auto 0;z-index:60;
+  display:flex;align-items:center;gap:22px;
+  padding:14px var(--pad);
+  color:var(--bone);
+  transition:background .45s var(--ease),color .35s linear,border-color .45s;
+  border-bottom:1px solid transparent;
+}
+/* A scrim, not a backdrop-filter: creating that layer on the first scroll cost a
+   single 76 ms frame at y=225, and over moving film a gradient reads better anyway. */
+.hdr.stuck{background:linear-gradient(180deg,rgba(9,9,11,.95),rgba(9,9,11,.74));border-bottom-color:var(--smoke)}
+.hdr.on-light{color:#141317}
+.hdr__mark{display:flex;align-items:center;gap:11px;text-decoration:none;flex:0 0 auto}
+.hdr__mark img{width:46px;height:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}
+.hdr.on-light .hdr__mark img{filter:drop-shadow(0 1px 4px rgba(255,255,255,.7))}
+.hdr__name{font:400 var(--t-19)/1 var(--f-disp);letter-spacing:.02em}
+.hdr__name em{font-style:normal;color:var(--red);margin-left:.14em}
+.hdr.on-light .hdr__name em{color:var(--red-deep)}
+.hdr__nav{margin-left:auto;display:flex;gap:26px}
+.hdr__nav a{font:600 var(--t-125)/1 var(--f-body);letter-spacing:.13em;text-transform:uppercase;text-decoration:none;opacity:.72;transition:opacity .25s}
+.hdr__nav a:hover{opacity:1}
+.hdr__cta{
+  display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+  font:700 var(--t-14)/1 var(--f-mono);letter-spacing:.01em;
+  padding:11px 17px;border:1px solid currentColor;border-radius:999px;
+  transition:background .25s,color .25s,border-color .25s;
+}
+.hdr__cta:hover{background:var(--red);border-color:var(--red);color:#fff}
+.hdr__cta .dot{width:7px;height:7px;border-radius:50%;background:var(--neon);box-shadow:0 0 10px var(--neon)}
+@media(max-width:900px){ .hdr__nav{display:none} .hdr__name{display:none} .hdr__cta{margin-left:auto} }
+
+/* ════════════ THE FILM ════════════ */
+.film__driver{height:600vh;position:relative}
+.film__stage{position:sticky;top:0;height:100vh;overflow:hidden;background:#08080A}
+
+/* Live ambient bleed — the film's own light, thrown onto the room behind the glass.
+   Blur BEFORE scale: filter runs in the element's own coordinate space, so a 14px
+   blur on a 240px box costs a fraction of a 52px blur on a full-viewport one. */
+.film__amb{
+  position:absolute;top:50%;left:50%;width:240px;height:420px;
+  filter:blur(13px) saturate(1.5) brightness(1.1);
+  opacity:.62;
+  transform:translate(-50%,-50%) scale(8);
+  transform-origin:center;will-change:transform;
+}
+.film__stage::after{        /* vignette */
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:4;
+  background:radial-gradient(130% 92% at 50% 42%,transparent 34%,rgba(0,0,0,.62) 100%);
+}
+
+/* the pane of glass */
+.pane{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  height:100vh;width:calc(100vh * 0.5625);
+  z-index:2;overflow:hidden;background:#0A0A0C;
+}
+@media(min-width:1024px){
+  .pane{left:auto;right:max(var(--pad),6vw);transform:translate(0,-50%);
+        height:92vh;width:calc(92vh * 0.5625);
+        box-shadow:0 40px 120px rgba(0,0,0,.72), 0 0 0 1px rgba(255,255,255,.07)}
+}
+.pane__poster,.pane__cv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pane__poster{z-index:1;transition:opacity .5s linear}
+.pane__cv{z-index:2;opacity:0;transition:opacity .35s linear}
+.pane.live .pane__cv{opacity:1}
+.pane.live .pane__poster{opacity:0}
+
+/* The sun, still hitting everything BELOW the squeegee — you lay film from the
+   top down, so above the edge is already done and below it is raw Texas. */
+.heat{
+  position:absolute;inset:0;z-index:3;pointer-events:none;
+  clip-path:inset(var(--pass) 0 0 0);
+  background:
+    radial-gradient(120% 70% at 62% -8%,rgba(255,247,224,.5),transparent 62%),
+    linear-gradient(180deg,rgba(255,238,198,.26),rgba(255,190,96,.13) 66%,rgba(255,186,90,.06));
+  backdrop-filter:saturate(.5) brightness(1.46) contrast(.95);
+  -webkit-backdrop-filter:saturate(.5) brightness(1.46) contrast(.95);
+}
+@supports not (backdrop-filter:blur(1px)){
+  .heat{background:linear-gradient(180deg,rgba(255,242,214,.62),rgba(255,206,128,.42))}
+}
+
+/* the wet edge travelling down the glass */
+.bead{position:absolute;left:0;right:0;top:var(--pass);z-index:5;pointer-events:none;opacity:0;transition:opacity .4s}
+.bead.on{opacity:1}
+.bead i{
+  position:absolute;left:0;right:0;top:-13px;height:26px;display:block;
+  background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.5) 42%,#fff 50%,rgba(190,228,255,.55) 58%,rgba(255,255,255,0));
+  box-shadow:0 0 26px 5px rgba(214,238,255,.44);
+}
+
+/* instrument */
+.inst{
+  position:absolute;left:var(--pad);bottom:calc(var(--pad) + 4px);z-index:8;
+  font-family:var(--f-mono);color:var(--bone);mix-blend-mode:difference;
+  opacity:0;transition:opacity .6s var(--ease);
+  will-change:opacity;transform:translateZ(0);   /* build the blend group at paint, not mid-scroll */
+}
+.inst.on{opacity:1}
+.inst__row{display:flex;align-items:baseline;gap:8px}
+.inst__k{font-size:var(--t-11);letter-spacing:.3em;opacity:.62}
+.inst__v{font-size:var(--t-44);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.inst__u{font-size:var(--t-16);opacity:.62}
+.inst__bar{width:132px;height:2px;background:rgba(255,255,255,.22);margin:9px 0 7px}
+.inst__bar i{display:block;height:100%;width:0;background:var(--bone)}
+.inst__ch{font-size:var(--t-11);letter-spacing:.3em;opacity:.68}
+@media(max-width:1023px){ .inst{bottom:auto;top:calc(80px + env(safe-area-inset-top));left:var(--pad)} .inst__v{font-size:var(--t-32)} }
+/* difference-blending a light readout over a bleached wall leaves it invisible */
+.film__stage.hot .inst,.film__stage.hot .scrollcue{mix-blend-mode:normal;color:#241C28}
+.film__stage.hot .inst__bar{background:rgba(20,14,22,.28)}
+.film__stage.hot .inst__bar i{background:#241C28}
+
+.scrollcue{
+  position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:9;
+  display:flex;flex-direction:column;align-items:center;gap:9px;
+  font:700 var(--t-11)/1 var(--f-mono);letter-spacing:.28em;color:var(--bone);
+  mix-blend-mode:difference;transition:opacity .5s
+}
+.scrollcue i{width:1px;height:34px;background:linear-gradient(180deg,currentColor,transparent);animation:cue 2.1s var(--ease) infinite}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}46%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+.scrollcue.gone{opacity:0}
+@media(min-width:1024px){ .scrollcue{left:max(var(--pad),6vw);transform:none;align-items:flex-start} }
+
+/* beats */
+.beats{position:absolute;inset:0;z-index:7;pointer-events:none}
+.beat{
+  position:absolute;left:var(--pad);bottom:clamp(84px,14vh,150px);
+  width:min(560px,calc(100vw - var(--pad)*2));
+  opacity:0;will-change:opacity,transform
+}
+.beat>*{pointer-events:auto}
+@media(min-width:1024px){ .beat{left:max(var(--pad),6vw);bottom:auto;top:50%;transform:translateY(-50%);width:min(520px,42vw)} }
+.beat__eye{font:700 var(--t-11)/1.4 var(--f-mono);letter-spacing:.26em;text-transform:uppercase;color:var(--heat);margin-bottom:16px}
+.beat__h{
+  font-size:clamp(40px,7.4vw,84px);
+  text-shadow:2px 3px 0 var(--red);          /* the mural's red keyline, inverted */
+  margin-bottom:16px;
+}
+.beat__p{font-size:var(--t-19);line-height:1.5;color:rgba(244,241,234,.9);max-width:44ch;text-shadow:0 2px 18px rgba(0,0,0,.85)}
+.beat--fin .beat__p{margin-bottom:24px}
+
+/* While the copy is still standing in the sun it reads as dark ink on a bleached
+   wall; once the squeegee passes it, it becomes light on tinted glass. */
+.film__stage.hot .beat__h{color:#17121A;text-shadow:2px 3px 0 rgba(200,16,46,.92)}
+.film__stage.hot .beat__p{color:#2C2430;text-shadow:0 1px 10px rgba(255,255,255,.5)}
+.film__stage.hot .beat__eye{color:#9A3208}
+
+.loader{position:absolute;left:0;right:0;bottom:0;height:2px;z-index:20;background:rgba(255,255,255,.08)}
+.loader i{display:block;height:100%;width:0;background:var(--neon);transition:width .3s linear}
+.loader.done{opacity:0;transition:opacity .6s .3s}
+
+/* ════════════ shared section furniture ════════════ */
+.sec{padding:clamp(80px,12vh,150px) var(--pad);position:relative}
+.sec__head{max-width:var(--maxw);margin:0 auto clamp(38px,6vh,64px)}
+.eyebrow{display:flex;align-items:center;gap:14px;font:700 var(--t-11)/1 var(--f-mono);letter-spacing:.28em;text-transform:uppercase;color:var(--red-lite);margin-bottom:20px}
+.rule{width:44px;height:1px;background:var(--red);display:block}
+.h2{font-size:clamp(32px,5.4vw,64px)}
+.lede{margin-top:20px;font-size:var(--t-19);color:var(--muted);max-width:56ch}
+.lede--sm{font-size:var(--t-16);margin-top:14px}
+.lede b{color:var(--bone)}
+
+.btn{
+  display:inline-flex;align-items:center;gap:10px;text-decoration:none;
+  font:700 var(--t-14)/1 var(--f-body);letter-spacing:.05em;text-transform:uppercase;
+  padding:16px 26px;border-radius:999px;transition:transform .2s var(--ease),background .25s,box-shadow .25s
+}
+.btn--big{background:var(--red);color:#fff;box-shadow:0 10px 34px rgba(200,16,46,.34)}
+.btn--big:hover{transform:translateY(-2px);background:#E2142F;box-shadow:0 14px 42px rgba(200,16,46,.46)}
+.btn--ghost{border:1px solid var(--smoke);color:var(--bone)}
+.btn--ghost:hover{border-color:var(--bone);transform:translateY(-2px)}
+
+/* reveal-on-scroll */
+.rv{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.rv.in{opacity:1;transform:none}
+/* ?flat: settled state, no transitions — for contrast audits and flat screenshots */
+.flat .rv{opacity:1!important;transform:none!important;transition:none!important;transition-delay:0s!important}
+
+/* ════════════ THE WORK — honeycomb ════════════ */
+.work{background:linear-gradient(180deg,#08080A,var(--ink) 30%)}
+.comb{max-width:var(--maxw);margin:0 auto;--cw:clamp(148px,25vw,318px);--cg:calc(var(--cw)*.06)}
+.comb__row{display:flex;justify-content:center;gap:var(--cg)}
+.comb__row--off{margin-top:var(--cg)}
+@media(min-width:760px){
+  .comb__row{justify-content:flex-start}
+  .comb__row--off{margin-left:calc((var(--cw) + var(--cg))/2)}
+}
+.cell{margin:0;width:var(--cw);aspect-ratio:1/.9;position:relative;cursor:pointer}
+.cell__in{
+  position:absolute;inset:0;
+  clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+  background:var(--hex);            /* becomes the LED tube edge */
+  transition:filter .4s var(--ease)
+}
+.cell__in>img,.cell__in>video{
+  position:absolute;inset:2px;width:calc(100% - 4px);height:calc(100% - 4px);
+  object-fit:cover;
+  clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+  filter:saturate(.94) contrast(1.05)
+}
+.cell__in>video{opacity:0;transition:opacity .4s linear;z-index:2}
+.cell.playing .cell__in>video{opacity:1}
+.cell__in{filter:drop-shadow(0 0 0 rgba(234,244,255,0))}
+.cell:hover .cell__in,.cell.playing .cell__in{filter:drop-shadow(0 0 18px rgba(234,244,255,.4))}
+.cell figcaption{
+  position:absolute;left:0;right:0;bottom:11%;z-index:3;text-align:center;
+  display:flex;flex-direction:column;gap:2px;
+  opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s var(--ease);
+  pointer-events:none;text-shadow:0 2px 14px rgba(0,0,0,.9)
+}
+.cell:hover figcaption,.cell.playing figcaption{opacity:1;transform:none}
+.cell figcaption b{font:400 var(--t-16)/1.1 var(--f-disp);text-transform:uppercase;letter-spacing:.01em}
+.cell figcaption span{font:400 var(--t-11)/1 var(--f-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--hex);opacity:.85}
+
+/* ════════════ WHY ════════════ */
+.why{background:var(--ink)}
+.why__list{max-width:var(--maxw);margin:0 auto;padding:0;list-style:none;
+  display:grid;gap:1px;background:var(--smoke);border-top:1px solid var(--smoke);border-bottom:1px solid var(--smoke);
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.why__list li{background:var(--ink);padding:clamp(26px,3.4vw,42px)}
+.why__n{font:700 var(--t-11)/1 var(--f-mono);letter-spacing:.24em;color:var(--red-lite)}
+.why__list h3{font-size:var(--t-24);margin:16px 0 12px;letter-spacing:-.01em}
+.why__list p{color:var(--muted);font-size:var(--t-16)}
+
+/* ════════════ SHADES ════════════ */
+.shades{background:linear-gradient(180deg,var(--ink),var(--ink2))}
+.ladder{max-width:var(--maxw);margin:0 auto;border:1px solid var(--smoke)}
+.rung + .rung{border-top:1px solid var(--smoke)}
+.rung{
+  background:var(--ink);display:grid;align-items:center;gap:6px 26px;padding:22px clamp(18px,2.6vw,34px);
+  grid-template-columns:auto 148px 1fr;
+  transition:background .3s
+}
+/* the number and the swatch read against the WHOLE row, not just its first line */
+.rung__n,.rung__sw{grid-row:1/-1;align-self:center}
+.rung:hover{background:var(--ink3)}
+.rung__n{font:700 var(--t-32)/1 var(--f-mono);width:92px;font-variant-numeric:tabular-nums}
+.rung__n i{font-size:var(--t-14);font-style:normal;opacity:.5;margin-left:2px}
+/* A bright reference under the film, so the step from 70% to 5% is visible at a
+   glance. A dark source photo makes every shade look identical. */
+.rung__sw{
+  height:84px;border-radius:6px;border:1px solid rgba(255,255,255,.13);
+  background:linear-gradient(rgba(6,10,14,var(--a)),rgba(8,14,20,var(--a))),
+             url("../assets/swatch.jpg") center/cover;
+}
+.rung b{grid-column:3;font:400 var(--t-19)/1.2 var(--f-disp);text-transform:uppercase}
+.rung p{grid-column:3;color:var(--muted);font-size:var(--t-14)}
+.rung em{grid-column:3;justify-self:start;font:700 var(--t-11)/1 var(--f-mono);letter-spacing:.16em;text-transform:uppercase;font-style:normal;padding:6px 10px;border-radius:4px;margin-top:6px}
+.rung em.ok{color:#8BE8A8;background:rgba(46,160,84,.14);border:1px solid rgba(80,200,120,.3)}
+.rung em.no{color:#FFB4A2;background:rgba(200,16,46,.14);border:1px solid rgba(200,16,46,.36)}
+@media(max-width:700px){
+  .rung{grid-template-columns:auto 56px;gap:4px 16px}
+  .rung__n{font-size:var(--t-24);width:62px}
+  .rung__sw{height:44px}
+  .rung b,.rung p,.rung em{grid-column:1/-1}
+}
+
+/* ════════════ LAW ════════════ */
+.law{background:var(--ink2);border-top:1px solid var(--smoke)}
+.law__wrap{max-width:var(--maxw);margin:0 auto}
+.law__list{display:grid;gap:1px;background:var(--smoke);border:1px solid var(--smoke);margin:0}
+.law__list>div{background:var(--ink);padding:clamp(20px,2.6vw,30px);display:grid;gap:8px}
+.law__list dt{font:400 var(--t-19)/1.2 var(--f-disp);text-transform:uppercase;color:var(--bone)}
+.law__list dd{margin:0;color:var(--muted);font-size:var(--t-16)}
+.law__list b{color:var(--bone)}
+@media(min-width:820px){ .law__list{grid-template-columns:1fr 1fr} }
+.law__note{margin-top:22px;color:var(--faint);font-size:var(--t-125);max-width:78ch;line-height:1.6}
+
+/* ════════════ ARENA ════════════ */
+.arena{position:relative;padding:0;min-height:clamp(520px,86vh,860px);display:grid;align-items:end;overflow:hidden;background:#050506}
+.arena__media{position:absolute;inset:0;z-index:0}
+.arena__media video{width:100%;height:100%;object-fit:cover;filter:saturate(.82) contrast(1.14)}
+.arena__scrim{position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(5,5,6,.72) 0%,rgba(5,5,6,.24) 34%,rgba(5,5,6,.9) 88%),
+  radial-gradient(70% 60% at 22% 70%,rgba(5,5,6,.78),transparent 70%)}
+.arena__copy{position:relative;z-index:2;padding:clamp(60px,9vh,110px) var(--pad);max-width:calc(var(--maxw) + var(--pad)*2);margin:0 auto;width:100%}
+.arena .h2{max-width:16ch}
+.arena .lede{max-width:52ch}
+
+/* ════════════ LANES ════════════ */
+.lanes{display:grid;gap:1px;background:var(--smoke);padding:0;
+  grid-template-columns:repeat(auto-fit,minmax(270px,1fr));border-bottom:1px solid var(--smoke)}
+.lane{background:var(--ink);padding:clamp(34px,4.6vw,58px) clamp(24px,3vw,44px)}
+.lane h3{font-size:var(--t-32);margin-bottom:14px}
+.lane p{color:var(--muted)}
+
+/* ════════════ BOOK ════════════ */
+.book{background:
+  linear-gradient(180deg,rgba(11,11,13,.9),rgba(11,11,13,.97)),
+  url("../assets/poster.jpg") center 30%/cover fixed;
+  border-bottom:1px solid var(--smoke)}
+@media(max-width:900px){ .book{background-attachment:scroll} }
+.book__in{max-width:var(--maxw);margin:0 auto}
+.book__h{margin-bottom:0}
+.book__acts{display:flex;flex-wrap:wrap;gap:14px;margin-top:32px}
+.book__facts{list-style:none;margin:44px 0 0;padding:0;display:grid;gap:1px;background:var(--smoke);
+  border:1px solid var(--smoke);grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.book__facts li{background:var(--ink);padding:20px 22px;font-size:var(--t-16)}
+.book__facts span{display:block;font:700 var(--t-11)/1 var(--f-mono);letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+
+/* ════════════ FOOTER ════════════ */
+.ftr{padding:clamp(44px,7vh,74px) var(--pad);display:grid;gap:20px;justify-items:center;text-align:center;background:#070709}
+.ftr__mark{width:104px;height:auto;opacity:.92}
+.ftr__name{font:400 var(--t-24)/1 var(--f-disp);letter-spacing:.03em}
+.ftr__l{color:var(--muted);font-size:var(--t-14)}
+.ftr__l a{color:var(--bone);text-decoration:none;border-bottom:1px solid var(--smoke)}
+.ftr__l a:hover{border-bottom-color:var(--red)}
+.ftr__fine{color:var(--faint);font-size:var(--t-125);max-width:52ch;margin-top:6px}
+
+/* ════════════ reduced motion ════════════ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .rv{opacity:1;transform:none}
+  .film__driver{height:auto}
+  .film__stage{position:relative;height:auto;min-height:100vh}
+  .beat{position:relative;opacity:1!important;transform:none!important;left:auto;top:auto;bottom:auto;
+        margin:0 auto clamp(40px,8vh,90px);padding-top:12vh}
+  .beats{position:relative;inset:auto;padding:14vh var(--pad) 8vh;display:grid;justify-items:start}
+  .pane{position:relative;transform:none;left:auto;right:auto;top:auto;margin:0 auto;height:auto;
+        width:min(520px,100%);aspect-ratio:9/16}
+  .heat,.bead,.scrollcue,.inst{display:none}
+}

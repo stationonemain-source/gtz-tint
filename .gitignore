@@ -1,0 +1,5 @@
+# Their reels and every build intermediate — 108 MB, PC-only. Rebuild recipe in STATE.md.
+media/
+verify/shots/
+verify/node_modules/
+node_modules/
