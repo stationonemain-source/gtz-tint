@@ -359,6 +359,9 @@ p{margin:0}
 .ftr__l a{color:var(--bone);text-decoration:none;border-bottom:1px solid var(--smoke)}
 .ftr__l a:hover{border-bottom-color:var(--red)}
 .ftr__fine{color:var(--faint);font-size:var(--t-125);max-width:52ch;margin-top:6px}
+.ftr__credit{margin-top:-8px}
+.ftr__credit a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--smoke);display:inline-block;padding:11px 4px}
+.ftr__credit a:hover{border-bottom-color:var(--red)}
 
 /* ════════════════════════════════════════════════════════════════
    MOBILE
